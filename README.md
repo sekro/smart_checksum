@@ -47,5 +47,7 @@ optional arguments:
   --lastok             Run this in case you get WRONG checksum to check for
                        last OK entries
   --force              If given all checksum will be recalculated
+  --save_often         If given DB will be saved every time after a new
+                       checksum was calculated
   --verbose            spams your screen
 ```
