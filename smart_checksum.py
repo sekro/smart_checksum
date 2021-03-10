@@ -27,6 +27,8 @@ defaults = {
 
 
 def get_checksum(filename, tool):
+    # wrap the filename into "" to cover all those spaces...
+    filename = '\"' + filename + '\"'
     shell_cmd = ' '.join([tool, filename])
     checksum_return_val = None
     # capture errors
