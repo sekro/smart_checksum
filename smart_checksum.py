@@ -64,6 +64,8 @@ def run_checksum_calculations(args, json_rp, checksum_dict):
                     n_skipped += 1
                 else:
                     checksum_dict[current_rel_path][args.checksum] = get_checksum(current_rel_path, checksum_tools[args.checksum])
+                    if args.verbose:
+                        print("{} - {}: {}".format(current_rel_path, args.checksum, checksum_dict[current_rel_path][args.checksum]))
                     n_calc += 1
                     if args.save_often:
                         save_db(json_rp, checksum_dict)
