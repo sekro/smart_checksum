@@ -65,6 +65,8 @@ def run_checksum_calculations(args, json_rp, checksum_dict):
                 else:
                     checksum_dict[current_rel_path][args.checksum] = get_checksum(current_rel_path, checksum_tools[args.checksum])
                     n_calc += 1
+                    if args.save_often:
+                        save_db(json_rp, checksum_dict)
     if args.force:
         print('force mode - all existing checksum were overwritten')
     print('Done - calculated {} and skipped {} existing checksums'.format(n_calc, n_skipped))
@@ -138,6 +140,8 @@ if __name__ == '__main__':
     parser.add_argument("--lastok", help="Run this in case you get WRONG checksum to check for last OK entries",
                         action='store_true')
     parser.add_argument("--force", help="If given all checksum will be recalculated",
+                        action='store_true')
+    parser.add_argument("--save_often", help="If given DB will be saved every time after a new checksum was calculated",
                         action='store_true')
     parser.add_argument("--verbose", help="spams your screen",
                         action='store_true')
