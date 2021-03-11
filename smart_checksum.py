@@ -22,7 +22,15 @@ checksum_tools = {
 
 defaults = {
     'checksums': 'md5',
-    'db': 'smart_sums_db.json'
+    'db': 'smart_sums_db.json',
+    'max_age': '1m'
+}
+
+allowed_age_types = {
+    'd': 1,
+    'w': 7,
+    'm': 30,
+    'y': 365
 }
 
 
@@ -46,6 +54,10 @@ def get_checksum(filename, tool):
 def save_db(json_rp, checksum_dict):
     with open(json_rp, 'w') as json_file:
         json.dump(checksum_dict, json_file, sort_keys=True, indent=4)
+
+
+def get_max_age_in_days(max_age_str):
+    return int(max_age_str[:-1]) * allowed_age_types[max_age_str[-1]]
 
 
 def run_checksum_calculations(args, json_rp, checksum_dict):
@@ -82,6 +94,7 @@ def run_checksum_check(args, json_rp, checksum_dict):
         n_files_to_check = len(checksum_dict)
         n_files_ok = 0
         n_files_wrong = 0
+        n_files_skipped = 0
         print("start checking {} files found in DB".format(n_files_to_check))
         for current_d, dirs, files in os.walk(args.target):
             for file in files:
@@ -91,6 +104,16 @@ def run_checksum_check(args, json_rp, checksum_dict):
                     if current_rel_path in checksum_dict:
                         if args.checksum in checksum_dict[current_rel_path]:
                             check_dt_str = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+                            if "OK" in checksum_dict[current_rel_path]:
+                                l = sorted(checksum_dict[current_rel_path]["OK"].keys())[-1].replace('_','-').replace(':','-').split('-')
+                                if all([i.isdigit() for i in l]):
+                                    # fail silently here - simply not call continue and calc the checksum if this doesn't work
+                                    delta = datetime.now() - datetime(int(l[0]), int(l[1]), int(l[2]), int(l[3]), int(l[4]), int(l[5]))
+                                    if delta.days < get_max_age_in_days(args.max_age):
+                                        if args.verbose:
+                                            print("only {} days since last check of {} - skipping file".format(delta.days, current_rel_path))
+                                        n_files_skipped += 1
+                                        continue
                             current_chksum = get_checksum(current_rel_path, checksum_tools[args.checksum])
                             if checksum_dict[current_rel_path][args.checksum] == current_chksum:
                                 if "OK" not in checksum_dict[current_rel_path]:
@@ -109,9 +132,17 @@ def run_checksum_check(args, json_rp, checksum_dict):
                                     args.checksum: current_chksum
                                 }
                                 n_files_wrong += 1
-        print("Done checking - found {} of {} files in DB - {} OK, {} WRONG".format(n_files_wrong + n_files_ok,
-                                                                                              n_files_to_check,
-                                                                                              n_files_ok, n_files_wrong))
+                            if args.save_often:
+                                save_db(json_rp, checksum_dict)
+        print("Done checking - found {} of {} files in DB - {} OK, {} WRONG, {} skipped due to last check OK and not "
+              "older than {} days".format(n_files_wrong +
+                                          n_files_ok +
+                                          n_files_skipped,
+                                          n_files_to_check,
+                                          n_files_ok,
+                                          n_files_wrong,
+                                          n_files_skipped,
+                                          get_max_age_in_days(args.max_age)))
         if n_files_wrong > 0:
             print("rerun with flag --lastok to see when WRONG files were last seen as OK")
         save_db(json_rp, checksum_dict)
@@ -139,6 +170,11 @@ if __name__ == '__main__':
                         default=defaults['db'])
     parser.add_argument("--check", help="If given check sums in db",
                         action='store_true')
+    parser.add_argument("--max_age",
+                        help="Specify max age of last check to do recheck / recalc of checksum - "
+                             "in combination with --check. Default: {} - iT i = integer and T = [d (days), "
+                             "w (weeks), m (month), y (years)".format(defaults['max_age']),
+                        default=defaults['max_age'])
     parser.add_argument("--lastok", help="Run this in case you get WRONG checksum to check for last OK entries",
                         action='store_true')
     parser.add_argument("--force", help="If given all checksum will be recalculated",
@@ -148,13 +184,23 @@ if __name__ == '__main__':
     parser.add_argument("--verbose", help="spams your screen",
                         action='store_true')
     args = parser.parse_args()
-    json_rp = os.path.join(args.target, args.db)
+    # argument checks
+    if not args.max_age[-1].lower() in allowed_age_types:
+        print('Unknown time specifier {} - please use one of these: {}'.format(args.max_age[-1].lower(),
+                                                                               list(allowed_age_types.keys())))
+        sys.exit(1)
+    if not args.max_age[:-1].isdigit():
+        print('max_age value has to be an integer - example: 1m = 1 month, 15w = 15 weeks')
+        sys.exit(1)
     if not os.path.exists(args.target):
         print("target path does not exist / not found - exiting")
         sys.exit(1)
     if args.checksum not in checksum_tools:
-        print("undefined checksum type {} - use one of these {} - exiting".format(args.checksum, list(checksum_tools.keys())))
+        print("undefined checksum type {} - use one of these {} - exiting".format(args.checksum,
+                                                                                  list(checksum_tools.keys())))
         sys.exit(1)
+
+    json_rp = os.path.join(args.target, args.db)
     if os.path.exists(json_rp):
         with open(json_rp, 'r') as json_file:
             checksum_dict = json.load(json_file)
