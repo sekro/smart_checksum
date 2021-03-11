@@ -29,7 +29,8 @@ Run with --check to check against DB file (should be in target dir)
 
 ```
 usage: smart_checksum.py [-h] [--checksum CHECKSUM] [--db DB] [--check]
-                         [--lastok] [--force] [--verbose]
+                         [--max_age MAX_AGE] [--lastok] [--force]
+                         [--save_often] [--verbose]
                          target
 
 smart_checksum - python warpped checksum calc&check
@@ -44,6 +45,10 @@ optional arguments:
   --db DB              Filename for checksum database in json format - default
                        smart_sums_db.json
   --check              If given check sums in db
+  --max_age MAX_AGE    Specify max age of last check to do recheck / recalc of
+                       checksum - in combination with --check. Default: 1m -
+                       iT i = integer and T = [d (days), w (weeks), m (month),
+                       y (years)
   --lastok             Run this in case you get WRONG checksum to check for
                        last OK entries
   --force              If given all checksum will be recalculated
