@@ -160,6 +160,15 @@ def run_find_lastok(args, checksum_dict):
                 print("File {} was never OK".format(filename))
 
 
+def generate_relative_path_plain_checksum_file(args, checksum_dict):
+    with open(os.path.join(args.target,
+                           "plain_checksums_{}.{}".format(datetime.now().strftime("%Y-%m-%d_%H_%M_%S"), args.checksum))
+            , "w") as pf:
+        for filename, filec_dict in checksum_dict.items():
+            if args.checksum in filec_dict:
+                pf.write("{}  {}\n".format(filec_dict[args.checksum], os.path.relpath(filename, start=args.target)))
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='smart_checksum - python warpped checksum calc&check')
     parser.add_argument("target", help="base folder with files to be checked")
@@ -182,6 +191,9 @@ if __name__ == '__main__':
     parser.add_argument("--save_often", help="If given DB will be saved every time after a new checksum was calculated",
                         action='store_true')
     parser.add_argument("--verbose", help="spams your screen",
+                        action='store_true')
+    parser.add_argument("--gen_plain_checksum_file",
+                        help="generates a plain text checksum file with relative path from TARGET",
                         action='store_true')
     args = parser.parse_args()
     # argument checks
@@ -206,11 +218,14 @@ if __name__ == '__main__':
             checksum_dict = json.load(json_file)
     else:
         checksum_dict = {}
-    if args.check:
-        run_checksum_check(args, json_rp, checksum_dict)
-    if args.lastok:
-        run_find_lastok(args, checksum_dict)
-    # ok this is a bit studpid but only run if flags --check and --lastok are not set
-    if not args.check and not args.lastok:
-        run_checksum_calculations(args, json_rp, checksum_dict)
+    if args.gen_plain_checksum_file:
+        generate_relative_path_plain_checksum_file(args, checksum_dict)
+    else:
+        if args.check:
+            run_checksum_check(args, json_rp, checksum_dict)
+        if args.lastok:
+            run_find_lastok(args, checksum_dict)
+        # ok this is a bit studpid but only run if flags --check and --lastok are not set
+        if not args.check and not args.lastok:
+            run_checksum_calculations(args, json_rp, checksum_dict)
     sys.exit(0)
