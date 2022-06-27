@@ -55,4 +55,6 @@ optional arguments:
   --save_often         If given DB will be saved every time after a new
                        checksum was calculated
   --verbose            spams your screen
+  --gen_plain_checksum_file
+                       generates a plain text checksum file with relative path from TARGET 
 ```
