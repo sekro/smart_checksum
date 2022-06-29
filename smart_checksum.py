@@ -22,7 +22,7 @@ checksum_tools = {
 
 defaults = {
     'checksums': 'md5',
-    'db': 'smart_sums_db.json',
+    'db': 'smart_checksums_db.json',
     'max_age': '1m'
 }
 
